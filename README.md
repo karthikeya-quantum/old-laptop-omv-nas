@@ -1,56 +1,90 @@
-﻿# 🖥️ Old Laptop to 24/7 Home Cloud (OpenMediaVault + Docker)
+# Old Laptop Home Cloud (OpenMediaVault NAS)
 
-Turn an old, unused laptop or PC into a fast, private, self-hosted **Home Cloud & Media Server**—replacing Google Photos, Netflix/Plex, Google Drive, and sketchy online file/PDF converters with your own hardware.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![OpenMediaVault](https://img.shields.io/badge/OpenMediaVault-7.x-blue.svg)](https://www.openmediavault.org/)
+[![Debian](https://img.shields.io/badge/OS-Debian%2012%20(Bookworm)-red.svg)](https://www.debian.org/)
 
-This repository is a **battle-tested, step-by-step blueprint** built from real-world deployment and troubleshooting. Every guide includes **copy-paste commands**, **expected terminal outputs**, and **exact fixes for common errors** so anyone can build this from scratch—even with zero prior Linux or server experience.
+A step-by-step guide and configuration repository to turn an old, unused laptop into a low-power, reliable **Network Attached Storage (NAS)** and personal home cloud server using **OpenMediaVault (OMV)**.
 
----
-
-## 🗺️ Step-by-Step Build Phases
-
-Follow these guides strictly in order:
-
-| Phase | Guide | What You Will Set Up |
-| :--- | :--- | :--- |
-| **Phase 1** | **[Base OS, 24/7 Laptop Tuning & Storage](docs/01-base-os-and-hardware-tuning.md)** | Install OpenMediaVault, disable lid-close sleep, enable **Battery Conservation Mode**, mount drives by UUID, and set up Docker Compose |
-| **Phase 2** | **[Networking, Pi-hole & Tailscale Split DNS](docs/02-networking-pihole-and-tailscale.md)** | Static IP, network-wide ad blocking, custom `.lan` URLs, global Docker DNS fix, and remote access without port forwarding |
-| **Phase 3** | **[Media & Personal Cloud Apps](docs/03-media-and-personal-cloud.md)** | **Immich** (photo backup), **Jellyfin** (with Intel QuickSync GPU transcoding), **FileBrowser**, and Windows/Mac SMB shares |
-| **Phase 4** | **[Daily Utilities & One-Click Web Terminal](docs/04-daily-utilities-and-web-terminal.md)** | **Stirling-PDF**, **ConvertX** (1,000+ format converter), and **WeTTY** one-click browser SSH login |
-| **Phase 5** | **[Dashboard, Monitoring & Security](docs/05-dashboard-monitoring-and-security.md)** | **Homarr** dashboard, **Scrutiny** drive S.M.A.R.T. health, **Uptime Kuma** Telegram alerts, and **Fail2Ban** hardening |
+> **Why use an old laptop?** Laptops consume very little power (typically 10W–25W at idle), include a built-in screen and keyboard for easy troubleshooting, and have an integrated battery that acts as a built-in Uninterruptible Power Supply (UPS) during short power outages.
 
 ---
 
-## ✨ Full Service & Port Map
-
-| Category | Service | Replaces | Port | Local / Remote URL |
-| :--- | :--- | :--- | :--- | :--- |
-| **Dashboard** | **Homarr** | Browser Bookmarks | `7575` | `http://homecloud.lan:7575` |
-| **Photos & Videos** | **Immich** | Google Photos / iCloud | `2283` | `http://homecloud.lan:2283` |
-| **Movies & TV** | **Jellyfin** | Netflix / Plex | `8096` | `http://homecloud.lan:8096` |
-| **Cloud Files** | **FileBrowser & SMB** | Google Drive / Local NAS | `8085` | `http://homecloud.lan:8085` |
-| **PDF Toolkit** | **Stirling-PDF** | iLovePDF / Smallpdf | `8089` | `http://homecloud.lan:8089` |
-| **File Converter** | **ConvertX** | CloudConvert (1,000+ formats) | `3009` | `http://homecloud.lan:3009` |
-| **Ad-Blocker & DNS** | **Pi-hole** | Network-wide Ad & Tracker Blocking | `8081` | `http://homecloud.lan` |
-| **Remote Access** | **Tailscale** | Port Forwarding / Paid VPN | — | Works anywhere via `.lan` Split DNS |
-| **Web SSH Terminal**| **WeTTY** | Desktop SSH Client | `3011` | `https://homecloud.lan` |
-| **Drive Health** | **Scrutiny** | Manual S.M.A.R.T. Checks | `8088` | `http://homecloud.lan:8088` |
-| **Uptime & Alerts** | **Uptime Kuma** | Paid Monitoring + Telegram Alerts | `3001` | `http://homecloud.lan:3001` |
+## Table of Contents
+- [Features](#-features)
+- [Hardware Requirements](#-hardware-requirements)
+- [Phase 1: Hardware & BIOS Preparation](#-phase-1-hardware--bios-preparation)
+- [Phase 2: Installing Debian & OpenMediaVault](#-phase-2-installing-debian--openmediavault)
+- [Phase 3: Laptop-Specific Power Configuration](#-phase-3-laptop-specific-power-configuration)
+- [Phase 4: Storage & Shared Folders Setup](#-phase-4-storage--shared-folders-setup)
+- [Phase 5: Optional Docker Containers](#-phase-5-optional-docker-containers)
+- [Troubleshooting & FAQ](#-troubleshooting--faq)
+- [License](#-license)
 
 ---
 
-## 🛠️ Why an Old Laptop Makes a Great Home Server
-
-* **Built-In UPS:** The laptop's battery keeps your server running safely through short power cuts without corrupting databases.
-* **Ultra-Low Power Draw:** Mobile CPUs (like Intel Core i5-6200U) idle at **8W–15W**, costing pennies a day to run 24/7.
-* **Hardware Video Transcoding:** Built-in Intel QuickSync (QSV) handles smooth 1080p/4K video streaming in Jellyfin.
+## ✨ Features
+- **Local Network File Sharing:** Seamless access from Windows, macOS, Linux, iOS, and Android via **SMB/CIFS**.
+- **Low Power Consumption:** Optimized idle power draw with lid-closed headless operation.
+- **Automated Backups:** Scheduled `rsync` jobs or Time Machine support.
+- **Expandable via Docker:** Ready for self-hosted apps like Immich (Google Photos alternative), Jellyfin (media server), or Nextcloud.
 
 ---
 
-## 🔒 Configuration Placeholders
+## 💻 Hardware Requirements
+- **Laptop:** Any 64-bit x86 laptop made in the last 10–12 years.
+- **CPU:** Dual-core processor or better (Intel Core i3/i5 or AMD equivalent).
+- **RAM:** Minimum **2 GB** (4 GB+ recommended if running Docker containers).
+- **Boot Drive:** Internal SSD or HDD (minimum 16 GB; OMV cannot share the OS partition for user data without plugins).
+- **Storage Drive(s):** External USB 3.0 HDD/SSD or secondary internal drive for bulk data storage.
+- **Network:** **Ethernet cable (Recommended)** for stable, high-speed file transfers. *(Wi-Fi works for setup, but wired is strongly advised for NAS workloads).*
+- **Installation Media:** 1x USB flash drive (8 GB or larger).
 
-All `compose/*/docker-compose.yml` templates use standardized placeholders—replace these with your own values before deploying:
+> ⚠️ **Battery Safety Warning:** Inspect your laptop battery before running it 24/7. If the battery is swollen or severely degraded, remove it completely and run the laptop directly off the AC power adapter to prevent fire hazards.
 
-* `<SERVER_LAN_IP>` — Your server's static local IP (e.g., `192.168.0.113`)
-* `<SERVER_TAILSCALE_IP>` — Your server's Tailscale IP (e.g., `100.x.x.x`)
-* `<APPDATA_UUID>` — Mount UUID of your fast SSD for Docker configurations
-* `<MEDIA_UUID>` — Mount UUID of your storage drive for photos, movies, and files
+---
+
+## 🛠 Phase 1: Hardware & BIOS Preparation
+
+1. **Create Bootable Media:**
+   - Download the **Debian 12 (Bookworm) Netinst ISO** (64-bit) or the official **OpenMediaVault ISO**.
+   - Flash the ISO onto your USB stick using [Rufus](https://rufus.ie/) (Windows) or [BalenaEtcher](https://etcher.balena.io/) (Windows/macOS/Linux).
+2. **Configure Laptop BIOS/UEFI:**
+   - Plug in the USB drive, power on the laptop, and enter BIOS (usually `F2`, `F10`, `F12`, or `Del`).
+   - Enable **Intel VT-x / AMD-V** (Virtualization Technology) if you plan to run Docker.
+   - Set **AC Power Recovery** (if available) to *Power On* so the NAS restarts automatically after a blackout.
+   - Set the USB drive as the first boot priority, save, and exit.
+
+---
+
+## 💿 Phase 2: Installing Debian & OpenMediaVault
+
+*(Note: Installing minimal Debian first is recommended on laptops because it handles laptop Wi-Fi/Ethernet drivers and disk partitioning better than the standalone OMV ISO).*
+
+1. **Install Debian (No Desktop Environment):**
+   - Boot from the USB drive and select **Install** (text mode) or **Graphical Install**.
+   - Follow the prompts for language, location, and hostname (e.g., `homelab-nas`).
+   - Leave the **root password** blank to automatically grant `sudo` privileges to your primary user.
+   - At the **Software Selection** screen, **UNCHECK** *Debian desktop environment* and *GNOME*, and **CHECK** only:
+     - `SSH server`
+     - `standard system utilities`
+2. **Install OpenMediaVault via Script:**
+   - Reboot into your new Debian terminal and log in.
+   - Run the official OMV installation script:
+     ```bash
+     sudo apt update && sudo apt upgrade -y
+     sudo apt install -y curl wget gnupg
+     wget -O - [https://github.com/OpenMediaVault-Plugin-Developers/installScript/raw/master/install](https://github.com/OpenMediaVault-Plugin-Developers/installScript/raw/master/install) | sudo bash
+     ```
+   - Wait 10–15 minutes for the installation to finish and reboot automatically.
+
+---
+
+## 🔋 Phase 3: Laptop-Specific Power Configuration
+
+By default, closing a laptop lid puts the system to sleep, disconnecting your NAS. Configure `systemd` to ignore the lid switch:
+
+1. Connect to your laptop via SSH (`ssh username@<laptop-ip>`) or use the local keyboard.
+2. Edit the `logind.conf` file:
+   ```bash
+   sudo nano /etc/systemd/logind.conf
