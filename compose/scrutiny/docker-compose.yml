@@ -1,0 +1,19 @@
+services:
+  scrutiny:
+    container_name: scrutiny
+    image: ghcr.io/analogj/scrutiny:master-omnibus
+    restart: unless-stopped
+    cap_add:
+      - SYS_RAWIO
+      - SYS_ADMIN
+    ports:
+      - "8088:8080"
+      - "8086:8086"
+    volumes:
+      - /run/udev:/run/udev:ro
+      - /srv/dev-disk-by-uuid-<APPDATA_UUID>/appdata/scrutiny/config:/opt/scrutiny/config
+      - /srv/dev-disk-by-uuid-<APPDATA_UUID>/appdata/scrutiny/influxdb:/opt/scrutiny/influxdb
+    devices:
+      - /dev/sda:/dev/sda
+      - /dev/sdb:/dev/sdb
+      - /dev/sdc:/dev/sdc

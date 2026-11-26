@@ -1,0 +1,11 @@
+services:
+  uptime-kuma:
+    container_name: uptime-kuma
+    image: louislam/uptime-kuma:latest
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    volumes:
+      - /srv/dev-disk-by-uuid-<APPDATA_UUID>/appdata/uptime-kuma:/app/data
+    extra_hosts:
+      - "homecloud.lan:<SERVER_LAN_IP>"

@@ -1,0 +1,12 @@
+services:
+  filebrowser:
+    container_name: filebrowser
+    image: filebrowser/filebrowser:latest
+    restart: unless-stopped
+    user: "1000:100"
+    ports:
+      - "8085:80"
+    volumes:
+      - /srv/dev-disk-by-uuid-<MEDIA_UUID>/Media:/srv
+      - /srv/dev-disk-by-uuid-<APPDATA_UUID>/appdata/filebrowser/filebrowser.db:/database/filebrowser.db
+      - /srv/dev-disk-by-uuid-<APPDATA_UUID>/appdata/filebrowser/settings.json:/config/settings.json
